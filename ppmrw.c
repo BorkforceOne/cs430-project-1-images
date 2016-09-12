@@ -70,14 +70,23 @@ int image_load_p3(FILE* fp, Image* image_ptr) {
 		return 1;
 	width = atoi(tokens);
 
+	if (width < 0)
+		return 1;
+
 	tokens = strtok(NULL, " ");
 	if (tokens == NULL)
 		return 1;
 	height = atoi(tokens);
 
+	if (height < 0)
+		return 1;
+
 	// Read in the max color value
 	fgets(buffer, IMAGE_READ_BUFFER_SIZE, fp);
 	color_max = atoi(buffer);
+
+	if (color_max < 0 || color_max > 65535)
+		return 1;
 
 	image_ptr->pixmap = malloc(sizeof(RGBpixel) * width * height);
 	image_ptr->width = width;
@@ -181,14 +190,23 @@ int image_load_p6(FILE* fp, Image* image_ptr) {
 		return 1;
 	width = atoi(tokens);
 
+	if (width < 0)
+		return 1;
+
 	tokens = strtok(NULL, " ");
 	if (tokens == NULL)
 		return 1;
 	height = atoi(tokens);
 
+	if (height < 0)
+		return 1;
+
 	// Read in the max color value
 	fgets(buffer, IMAGE_READ_BUFFER_SIZE, fp);
 	color_max = atoi(buffer);
+
+	if (color_max < 0 || color_max > 65535)
+		return 1;
 
 	image_ptr->pixmap = malloc(sizeof(RGBpixel) * width * height);
 	image_ptr->width = width;
