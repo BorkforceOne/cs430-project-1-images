@@ -16,10 +16,19 @@ typedef struct Image {
 	RGBpixel* pixmap;
 } Image;
 
+/**
+ * Shows a help message to the user
+ */
 void show_help() {
 	printf("Usage: ppmrw 3|6 input.ppm output.ppm\n");
 }
 
+/**
+ * Load a PPM P3 file into image_ptr
+ * @param fp
+ * @param image_ptr
+ * @return
+ */
 int image_load_p3(FILE* fp, Image* image_ptr) {
 	// Read until we get past the comments
 	fseek(fp, MAGIC_NUMBER_BUFFER_SIZE, SEEK_SET);
@@ -33,6 +42,7 @@ int image_load_p3(FILE* fp, Image* image_ptr) {
 	float color_max;
 	char buffer[IMAGE_READ_BUFFER_SIZE];
 	char* tokens;
+	uint16_t value;
 
 	// Read past the comments
 	c = fgetc(fp);
@@ -73,9 +83,6 @@ int image_load_p3(FILE* fp, Image* image_ptr) {
 	image_ptr->width = width;
 	image_ptr->height = height;
 
-	uint8_t value;
-	float scale;
-
 	// Read the actual image in
 	for (i=0; i<height; i++) {
 		for (j=0; j<width; j++) {
@@ -98,6 +105,102 @@ int image_load_p3(FILE* fp, Image* image_ptr) {
 	return 0;
 }
 
+/**
+ * Load a PPM P6 file into image_ptr
+ * @param fp
+ * @param image_ptr
+ * @return
+ */
+int image_load_p6(FILE* fp, Image* image_ptr) {
+	// Read until we get past the comments
+	fseek(fp, MAGIC_NUMBER_BUFFER_SIZE, SEEK_SET);
+	size_t bytes_read;
+	int i;
+	int j;
+	int k;
+	int c;
+	int width;
+	int height;
+	float color_max;
+	char buffer[IMAGE_READ_BUFFER_SIZE];
+	char* tokens;
+	uint16_t value;
+
+	// Read past the comments
+	c = fgetc(fp);
+	if (c == EOF)
+		return 1;
+	while (c == '#') {
+		while (c != '\n') {
+			c = fgetc(fp);
+			if (c == EOF)
+				return 1;
+		}
+		c = fgetc(fp);
+		if (c == EOF)
+			return 1;
+	};
+	// We read one to far, move back one
+	fseek(fp, -1, SEEK_CUR);
+
+	// We are at the first line of image header information
+	// Read in the dimensions of the image
+	fgets(buffer, IMAGE_READ_BUFFER_SIZE, fp);
+
+	tokens = strtok(buffer, " ");
+	if (tokens == NULL)
+		return 1;
+	width = atoi(tokens);
+
+	tokens = strtok(NULL, " ");
+	if (tokens == NULL)
+		return 1;
+	height = atoi(tokens);
+
+	// Read in the max color value
+	fgets(buffer, IMAGE_READ_BUFFER_SIZE, fp);
+	color_max = atoi(buffer);
+
+	image_ptr->pixmap = malloc(sizeof(RGBpixel) * width * height);
+	image_ptr->width = width;
+	image_ptr->height = height;
+
+	// Read the actual image in
+	for (i=0; i<height; i++) {
+		for (j=0; j<width; j++) {
+			for (k=0; k<3; k++) {
+				// If color_max is < 256 the values are 8 bit, otherwise they're 16 bit!
+				if (color_max < 256) {
+					fread(buffer, sizeof(char), 1, fp);
+					value = buffer[0] & 0xFF;
+				}
+				else {
+					fread(buffer, sizeof(char), 2, fp);
+					value = ((buffer[0] << 8) & 0xFF00) | (buffer[1] & 0xFF);
+				}
+
+				value = (value/color_max)*255;
+				printf("Value: '%i'\n", value);
+
+				if (k == 0)
+					image_ptr->pixmap[i*width + j].r = value;
+				if (k == 1)
+					image_ptr->pixmap[i*width + j].g = value;
+				if (k == 2)
+					image_ptr->pixmap[i*width + j].b = value;
+			}
+		}
+	}
+
+	return 0;
+}
+
+/**
+ * Loads an PPM image in P3 or P6 formats into the specified image_ptr
+ * @param image_ptr
+ * @param fname
+ * @return
+ */
 int load_image(Image* image_ptr, char* fname) {
 	FILE* fp = fopen(fname, "r");
 	if (fp) {
@@ -114,7 +217,7 @@ int load_image(Image* image_ptr, char* fname) {
 				result = image_load_p3(fp, image_ptr);
 			}
 			else if (strncmp("P6\n", f_buffer, MAGIC_NUMBER_BUFFER_SIZE) == 0) {
-				//result = load_p6_image(fp, image_ptr);
+				result = image_load_p6(fp, image_ptr);
 			}
 			else {
 				result = 1;
