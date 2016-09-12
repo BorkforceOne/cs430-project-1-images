@@ -180,7 +180,6 @@ int image_load_p6(FILE* fp, Image* image_ptr) {
 				}
 
 				value = (value/color_max)*255;
-				printf("Value: '%i'\n", value);
 
 				if (k == 0)
 					image_ptr->pixmap[i*width + j].r = value;
