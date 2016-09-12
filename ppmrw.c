@@ -106,6 +106,35 @@ int image_load_p3(FILE* fp, Image* image_ptr) {
 }
 
 /**
+ * Save an image in PPM P3 format to the specified file
+ * @param image_ptr
+ * @param fname
+ * @return
+ */
+int image_save_p3(Image* image_ptr, char* fname) {
+	FILE* fp = fopen(fname, "w");
+	int i;
+	int j;
+	if (fp) {
+		fprintf(fp, "P3\n");
+		fprintf(fp, "%i %i\n", image_ptr->width, image_ptr->height);
+		fprintf(fp, "255");
+		for (i=0; i<image_ptr->height; i++) {
+			for (j=0; j<image_ptr->width; j++) {
+				RGBpixel pixel = image_ptr->pixmap[i*image_ptr->width + j];
+				fprintf(fp, "\n%i\n%i\n%i", pixel.r, pixel.g, pixel.b);
+			}
+		}
+		fclose(fp);
+		return 0;
+	}
+	else {
+		fprintf(stderr, "Error: Could not open destination file for writing '%s'\n", fname);
+		return 1;
+	}
+}
+
+/**
  * Load a PPM P6 file into image_ptr
  * @param fp
  * @param image_ptr
@@ -247,6 +276,7 @@ int main (int argc, char *argv[])
 	char* fname_input = argv[2];
 	char* fname_output = argv[3];
 	Image image;
+	int result;
 
 	// Check for a correct version input
 	if (strcmp(ppm_version_str, "3") == 0)
@@ -261,7 +291,17 @@ int main (int argc, char *argv[])
 
 	// Process the input file
 
-	int result = load_image(&image, fname_input);
+	result = load_image(&image, fname_input);
+	if (result != 0) {
+		return result;
+	}
+
+	if (ppm_version == 3) {
+		result = image_save_p3(&image, fname_output);
+	}
+	else {
+		//result = image_save_p6(image, fname_output);
+	}
 	if (result != 0) {
 		return result;
 	}
