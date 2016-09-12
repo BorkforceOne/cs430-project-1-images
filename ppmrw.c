@@ -127,11 +127,11 @@ int image_save_p3(Image* image_ptr, char* fname) {
 	if (fp) {
 		fprintf(fp, "P3\n");
 		fprintf(fp, "%i %i\n", image_ptr->width, image_ptr->height);
-		fprintf(fp, "255");
+		fprintf(fp, "255\n");
 		for (i=0; i<image_ptr->height; i++) {
 			for (j=0; j<image_ptr->width; j++) {
 				RGBpixel pixel = image_ptr->pixmap[i*image_ptr->width + j];
-				fprintf(fp, "\n%i\n%i\n%i", pixel.r, pixel.g, pixel.b);
+				fprintf(fp, "%i\n%i\n%i\n", pixel.r, pixel.g, pixel.b);
 			}
 		}
 		fclose(fp);
