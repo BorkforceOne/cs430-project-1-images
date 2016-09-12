@@ -242,6 +242,39 @@ int image_load_p6(FILE* fp, Image* image_ptr) {
 }
 
 /**
+ * Save an image in PPM P6 format to the specified file
+ * @param image_ptr
+ * @param fname
+ * @return
+ */
+int image_save_p6(Image* image_ptr, char* fname) {
+	FILE* fp = fopen(fname, "w");
+	int i;
+	int j;
+	char buffer[3];
+	if (fp) {
+		fprintf(fp, "P6\n");
+		fprintf(fp, "%i %i\n", image_ptr->width, image_ptr->height);
+		fprintf(fp, "255\n");
+		for (i=0; i<image_ptr->height; i++) {
+			for (j=0; j<image_ptr->width; j++) {
+				RGBpixel pixel = image_ptr->pixmap[i*image_ptr->width + j];
+				buffer[0] = pixel.r;
+				buffer[1] = pixel.g;
+				buffer[2] = pixel.b;
+				fwrite(buffer, sizeof(uint8_t), 3, fp);
+			}
+		}
+		fclose(fp);
+		return 0;
+	}
+	else {
+		fprintf(stderr, "Error: Could not open destination file for writing '%s'\n", fname);
+		return 1;
+	}
+}
+
+/**
  * Loads an PPM image in P3 or P6 formats into the specified image_ptr
  * @param image_ptr
  * @param fname
@@ -318,7 +351,7 @@ int main (int argc, char *argv[])
 		result = image_save_p3(&image, fname_output);
 	}
 	else {
-		//result = image_save_p6(image, fname_output);
+		result = image_save_p6(&image, fname_output);
 	}
 	if (result != 0) {
 		return result;
