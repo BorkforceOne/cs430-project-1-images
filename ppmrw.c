@@ -4,7 +4,6 @@
 
 #define TRUE 1
 #define FALSE 0
-#define MAGIC_NUMBER_BUFFER_SIZE 3
 #define IMAGE_READ_BUFFER_SIZE 1024
 
 typedef struct RGBpixel {
@@ -29,70 +28,17 @@ void show_help() {
  * @param image_ptr
  * @return
  */
-int image_load_p3(FILE* fp, Image* image_ptr) {
-	// Read until we get past the comments
-	fseek(fp, MAGIC_NUMBER_BUFFER_SIZE, SEEK_SET);
-	size_t bytes_read;
+int image_load_p3(FILE* fp, Image* image_ptr, float color_max, char buffer[]) {
+	int height = image_ptr->height;
+	int width = image_ptr->width;
+	// Allocate space for the image in memory
+	image_ptr->pixmap = malloc(sizeof(RGBpixel) * width * height);
+
+	// Read the actual image in
 	int i;
 	int j;
 	int k;
-	int c;
-	int width;
-	int height;
-	float color_max;
-	char buffer[IMAGE_READ_BUFFER_SIZE];
-	char* tokens;
-	uint16_t value;
-
-	// Read past the comments
-	c = fgetc(fp);
-	if (c == EOF)
-		return 1;
-	while (c == '#') {
-		while (c != '\n') {
-			c = fgetc(fp);
-			if (c == EOF)
-				return 1;
-		}
-		c = fgetc(fp);
-		if (c == EOF)
-			return 1;
-	};
-	// We read one to far, move back one
-	fseek(fp, -1, SEEK_CUR);
-
-	// We are at the first line of image header information
-	// Read in the dimensions of the image
-	fgets(buffer, IMAGE_READ_BUFFER_SIZE, fp);
-
-	tokens = strtok(buffer, " ");
-	if (tokens == NULL)
-		return 1;
-	width = atoi(tokens);
-
-	if (width < 0)
-		return 1;
-
-	tokens = strtok(NULL, " ");
-	if (tokens == NULL)
-		return 1;
-	height = atoi(tokens);
-
-	if (height < 0)
-		return 1;
-
-	// Read in the max color value
-	fgets(buffer, IMAGE_READ_BUFFER_SIZE, fp);
-	color_max = atoi(buffer);
-
-	if (color_max < 0 || color_max > 65535)
-		return 1;
-
-	image_ptr->pixmap = malloc(sizeof(RGBpixel) * width * height);
-	image_ptr->width = width;
-	image_ptr->height = height;
-
-	// Read the actual image in
+	int value;
 	for (i=0; i<height; i++) {
 		for (j=0; j<width; j++) {
 			for (k=0; k<3; k++) {
@@ -125,15 +71,20 @@ int image_save_p3(Image* image_ptr, char* fname) {
 	int i;
 	int j;
 	if (fp) {
+		// write the magic number
 		fprintf(fp, "P3\n");
+		// write the width and height
 		fprintf(fp, "%i %i\n", image_ptr->width, image_ptr->height);
+		// write the color max
 		fprintf(fp, "255\n");
+		// write all individual pixels
 		for (i=0; i<image_ptr->height; i++) {
 			for (j=0; j<image_ptr->width; j++) {
 				RGBpixel pixel = image_ptr->pixmap[i*image_ptr->width + j];
 				fprintf(fp, "%i\n%i\n%i\n", pixel.r, pixel.g, pixel.b);
 			}
 		}
+		// close the file
 		fclose(fp);
 		return 0;
 	}
@@ -149,68 +100,14 @@ int image_save_p3(Image* image_ptr, char* fname) {
  * @param image_ptr
  * @return
  */
-int image_load_p6(FILE* fp, Image* image_ptr) {
-	// Read until we get past the comments
-	fseek(fp, MAGIC_NUMBER_BUFFER_SIZE, SEEK_SET);
-	size_t bytes_read;
+int image_load_p6(FILE* fp, Image* image_ptr, float color_max, char buffer[]) {
 	int i;
 	int j;
 	int k;
-	int c;
-	int width;
-	int height;
-	float color_max;
-	char buffer[IMAGE_READ_BUFFER_SIZE];
-	char* tokens;
-	uint16_t value;
-
-	// Read past the comments
-	c = fgetc(fp);
-	if (c == EOF)
-		return 1;
-	while (c == '#') {
-		while (c != '\n') {
-			c = fgetc(fp);
-			if (c == EOF)
-				return 1;
-		}
-		c = fgetc(fp);
-		if (c == EOF)
-			return 1;
-	};
-	// We read one to far, move back one
-	fseek(fp, -1, SEEK_CUR);
-
-	// We are at the first line of image header information
-	// Read in the dimensions of the image
-	fgets(buffer, IMAGE_READ_BUFFER_SIZE, fp);
-
-	tokens = strtok(buffer, " ");
-	if (tokens == NULL)
-		return 1;
-	width = atoi(tokens);
-
-	if (width < 0)
-		return 1;
-
-	tokens = strtok(NULL, " ");
-	if (tokens == NULL)
-		return 1;
-	height = atoi(tokens);
-
-	if (height < 0)
-		return 1;
-
-	// Read in the max color value
-	fgets(buffer, IMAGE_READ_BUFFER_SIZE, fp);
-	color_max = atoi(buffer);
-
-	if (color_max < 0 || color_max > 65535)
-		return 1;
-
+	int height = image_ptr->height;
+	int width = image_ptr->width;
+	int value;
 	image_ptr->pixmap = malloc(sizeof(RGBpixel) * width * height);
-	image_ptr->width = width;
-	image_ptr->height = height;
 
 	// Read the actual image in
 	for (i=0; i<height; i++) {
@@ -283,28 +180,109 @@ int image_save_p6(Image* image_ptr, char* fname) {
 int load_image(Image* image_ptr, char* fname) {
 	FILE* fp = fopen(fname, "r");
 	if (fp) {
-		int result = 1;
-		char f_buffer[MAGIC_NUMBER_BUFFER_SIZE];
+		int ppm_version = 0;
+		char buffer[IMAGE_READ_BUFFER_SIZE];
 		// Check for the magic number
-		size_t bytes_read = fread(f_buffer, sizeof(char), MAGIC_NUMBER_BUFFER_SIZE, fp);
+		size_t bytes_read = fread(buffer, sizeof(char), 3, fp);
 		if (bytes_read != 3) {
 			fprintf(stderr, "Error: The source file is not a valid PPM3 or PPM6 file\n");
-			result = 1;
+			fclose(fp);
+			return 1;
+		}
+		if (strncmp("P3\n", buffer, 3) == 0) {
+			ppm_version = 3;
+		}
+		else if (strncmp("P6\n", buffer, 3) == 0) {
+			ppm_version = 6;
 		}
 		else {
-			if (strncmp("P3\n", f_buffer, MAGIC_NUMBER_BUFFER_SIZE) == 0) {
-				result = image_load_p3(fp, image_ptr);
-			}
-			else if (strncmp("P6\n", f_buffer, MAGIC_NUMBER_BUFFER_SIZE) == 0) {
-				result = image_load_p6(fp, image_ptr);
-			}
-			else {
-				result = 1;
-			}
+			fprintf(stderr, "Error: The source file is not a valid PPM3 or PPM6 file\n");
+			fclose(fp);
+			return 1;
 		}
 
-		if (result != 0)
+
+		// Read past the comments
+		int c;
+		int width;
+		int height;
+		float color_max;
+		char* tokens;
+		uint16_t value;
+
+		// Read past the comments
+		c = fgetc(fp);
+		if (c == EOF)
+			return 1;
+		while (c == '#') {
+			while (c != '\n') {
+				c = fgetc(fp);
+				if (c == EOF)
+					return 1;
+			}
+			c = fgetc(fp);
+			if (c == EOF)
+				return 1;
+		};
+		// We read one to far, move back one
+		fseek(fp, -1, SEEK_CUR);
+
+		// We are at the first line of image header information
+		// Read in the dimensions of the image
+		fgets(buffer, IMAGE_READ_BUFFER_SIZE, fp);
+
+		tokens = strtok(buffer, " ");
+		if (tokens == NULL)
+		{
 			fprintf(stderr, "Error: The source file is not a valid PPM3 or PPM6 file\n");
+			fclose(fp);
+			return 1;
+		}
+		width = atoi(tokens);
+
+		if (width < 0)
+		{
+			fprintf(stderr, "Error: The source file is not a valid PPM3 or PPM6 file\n");
+			fclose(fp);
+			return 1;
+		}
+
+		tokens = strtok(NULL, " ");
+		if (tokens == NULL)
+		{
+			fprintf(stderr, "Error: The source file is not a valid PPM3 or PPM6 file\n");
+			fclose(fp);
+			return 1;
+		}
+		height = atoi(tokens);
+
+		if (height < 0)
+		{
+			fprintf(stderr, "Error: The source file is not a valid PPM3 or PPM6 file\n");
+			fclose(fp);
+			return 1;
+		}
+
+		// Read in the max color value
+		fgets(buffer, IMAGE_READ_BUFFER_SIZE, fp);
+		color_max = atoi(buffer);
+
+		if (color_max < 0 || color_max > 65535)
+		{
+			fprintf(stderr, "Error: The source file is not a valid PPM3 or PPM6 file\n");
+			fclose(fp);
+			return 1;
+		}
+
+		image_ptr->width = width;
+		image_ptr->height = height;
+
+		int result;
+		if (ppm_version == 6)
+			result = image_load_p6(fp, image_ptr, color_max, buffer);
+
+		if (ppm_version == 3)
+			result = image_load_p3(fp, image_ptr, color_max, buffer);
 
 		fclose(fp);
 		return result;
@@ -322,7 +300,7 @@ int main (int argc, char *argv[])
 		return 0;
 	}
 
-	uint8_t ppm_version = 0;
+	char ppm_version_to = 0;
 	char* ppm_version_str = argv[1];
 	char* fname_input = argv[2];
 	char* fname_output = argv[3];
@@ -331,11 +309,11 @@ int main (int argc, char *argv[])
 
 	// Check for a correct version input
 	if (strcmp(ppm_version_str, "3") == 0)
-		ppm_version = 3;
+		ppm_version_to = 3;
 	else if (strcmp(ppm_version_str, "6") == 0)
-		ppm_version = 6;
+		ppm_version_to = 6;
 
-	if (ppm_version == 0) {
+	if (ppm_version_to == 0) {
 		show_help();
 		return 0;
 	}
@@ -347,7 +325,7 @@ int main (int argc, char *argv[])
 		return result;
 	}
 
-	if (ppm_version == 3) {
+	if (ppm_version_to == 3) {
 		result = image_save_p3(&image, fname_output);
 	}
 	else {
