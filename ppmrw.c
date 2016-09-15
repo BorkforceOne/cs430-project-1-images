@@ -64,7 +64,8 @@ int skip_comments(FILE* fp) {
 
 /**
  * Increments the pointer past whitespace AND comments in a PPM file
- * This includes: spaces, TABs, CRs, LFs
+ * @param fp
+ * @return
  */
 int skip_whitespace(FILE* fp) {
 	int c;
@@ -129,6 +130,8 @@ int read_to_whitespace(FILE* fp, char buffer[], int buffer_size) {
  * Load a PPM P3 file into an image
  * @param fp
  * @param image_ptr
+ * @param color_max
+ * @param buffer
  * @return
  */
 int image_load_p3(FILE* fp, Image* image_ptr, int color_max, char buffer[]) {
@@ -218,6 +221,8 @@ int image_save_p3(Image* image_ptr, char* fname) {
  * Load a PPM P6 file into image_ptr
  * @param fp
  * @param image_ptr
+ * @param color_max
+ * @param buffer
  * @return
  */
 int image_load_p6(FILE* fp, Image* image_ptr, int color_max, char buffer[]) {
@@ -444,6 +449,12 @@ int load_image(Image* image_ptr, char* fname) {
 	}
 }
 
+/**
+ * Main function
+ * @param argc
+ * @param argv
+ * @return
+ */
 int main (int argc, char *argv[])
 {
 	if (argc != 4) {
@@ -470,7 +481,6 @@ int main (int argc, char *argv[])
 	}
 
 	// Process the input file
-
 	result = load_image(&image, fname_input);
 	if (result != 0) {
 		return result;
