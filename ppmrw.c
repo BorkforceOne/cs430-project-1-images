@@ -420,7 +420,7 @@ int load_image(Image* image_ptr, char* fname) {
 
 		if (color_max < 0 || color_max > 65535)
 		{
-			fprintf(stderr, ERR_INVALID_FILE);
+			fprintf(stderr, "Error: Expected maximum color value between 0 and 65536");
 			fclose(fp);
 			return 1;
 		}
