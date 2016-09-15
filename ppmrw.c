@@ -161,7 +161,10 @@ int image_load_p3(FILE* fp, Image* image_ptr, int color_max, char buffer[]) {
 					fprintf(stderr, "Error: A color sample is greater than the maximum color (%i) value \n", color_max);
 					return 1;
 				}
-
+				else if (atoi(buffer) < 0) {
+					fprintf(stderr, "Error: A negative color sample is not a valid value \n");
+					return 1;
+				}
 				value = (atoi(buffer)/(float)color_max)*255;
 				
 				if (k == 0)
